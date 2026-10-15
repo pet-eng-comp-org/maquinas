@@ -1,0 +1,18 @@
+// Regras de acesso da rede Tailscale do PET. Esta é a cópia de referência:
+// a que vale é a do painel (Access controls), e as duas devem ser iguais.
+{
+	"tagOwners": {
+		// As máquinas da sala.
+		"tag:maquina": ["autogroup:admin"],
+		// Quem administra as máquinas pelo Ansible (o server da Manutenção).
+		"tag:admin": ["autogroup:admin"],
+	},
+
+	"grants": [
+		// Administradores da rede e o server da Manutenção alcançam as máquinas.
+		{"src": ["autogroup:admin", "tag:admin"], "dst": ["tag:maquina"], "ip": ["*"]},
+		// As máquinas não alcançam nada na rede, nem umas às outras.
+	],
+
+	"ssh": [],
+}

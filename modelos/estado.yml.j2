@@ -1,0 +1,24 @@
+# Gerado por coleta.yml. Não editar à mão.
+nome: {{ inventory_hostname }}
+patrimonio: "{{ patrimonio }}"
+modelo: {{ modelo.stdout | trim | to_json }}
+sistema: {{ ansible_distribution }} {{ ansible_distribution_version }}
+kernel: {{ ansible_kernel }}
+processador: {{ ansible_processor[2] | default(ansible_processor[-1]) | to_json }}
+nucleos: {{ ansible_processor_vcpus }}
+memoria_total_mb: {{ ansible_memtotal_mb }}
+pentes:
+{% for p in pentes.stdout_lines %}
+  - {{ p | to_json }}
+{% endfor %}
+video:
+{% for v in video.stdout_lines %}
+  - {{ v | to_json }}
+{% endfor %}
+discos:
+{% for d in discos.stdout_lines %}
+  - {{ d | trim | to_json }}
+{% endfor %}
+raiz_livre_gb: {{ ((ansible_mounts | selectattr('mount', 'equalto', '/') | map(attribute='size_available') | list + [0]) | first / 1024**3) | round(1) }}
+ip: {{ ansible_default_ipv4.address | default('') }}
+mac: {{ ansible_default_ipv4.macaddress | default('') }}

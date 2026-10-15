@@ -1,0 +1,74 @@
+# Estado de base de todas as máquinas. Pode rodar quantas vezes quiser:
+# só muda o que estiver diferente.
+#
+#   ansible-playbook base.yml
+- name: Base das máquinas do PET
+  hosts: maquinas
+  vars:
+    pacotes:
+      - build-essential
+      - curl
+      - ethtool
+      - git
+      - htop
+      - openssh-server
+      - python3
+      - ufw
+      - unattended-upgrades
+      - vim
+  tasks:
+    - name: Pacotes de base
+      ansible.builtin.apt:
+        name: "{{ pacotes }}"
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Chaves de quem administra (só as da pasta chaves/)
+      ansible.posix.authorized_key:
+        user: manutencao
+        key: "{{ lookup('ansible.builtin.fileglob', 'chaves/*.pub', wantlist=True) | map('ansible.builtin.file') | join('\n') }}"
+        exclusive: true
+
+    - name: Sudo sem senha para a conta manutencao
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/manutencao
+        content: "manutencao ALL=(ALL) NOPASSWD: ALL\n"
+        mode: "0440"
+        validate: visudo -cf %s
+
+    - name: Atualizações de segurança automáticas
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+        mode: "0644"
+
+    - name: Tailscale se atualiza sozinho
+      ansible.builtin.command: tailscale set --auto-update
+      changed_when: false
+
+    # Ninguém de fora entra na máquina pela rede do DI; pelo Tailscale, só quem
+    # a regra de acesso da rede do PET deixa.
+    - name: Firewall aceita conexões só pelo Tailscale
+      community.general.ufw:
+        rule: allow
+        direction: in
+        interface: tailscale0
+
+    - name: Firewall bloqueia o resto do que chega
+      community.general.ufw:
+        state: enabled
+        default: deny
+        direction: incoming
+
+    - name: Conexões de rede cabeada
+      ansible.builtin.shell: >-
+        nmcli -t -f NAME,TYPE connection show | awk -F: '$2 == "802-3-ethernet" {print $1}'
+      register: cabeadas
+      changed_when: false
+
+    - name: Wake-on-LAN ligado (falta ativar na BIOS de cada máquina)
+      ansible.builtin.command: nmcli connection modify "{{ item }}" 802-3-ethernet.wake-on-lan magic
+      loop: "{{ cabeadas.stdout_lines }}"
+      changed_when: false

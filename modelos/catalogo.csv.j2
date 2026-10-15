@@ -1,0 +1,5 @@
+Codinome,Patrimônio,Tipo,Modelo,IP,MAC,SO,Processador,Gráfico,Memória,Armazenamento,Última verificação
+{% for h in groups['maquinas'] if hostvars[h].ansible_facts.hostname is defined %}
+{% set v = hostvars[h] %}
+"{{ h }}","{{ v.patrimonio }}","Desktop","{{ v.modelo.stdout | trim }}","{{ v.ansible_default_ipv4.address | default('') }}","{{ v.ansible_default_ipv4.macaddress | default('') }}","{{ v.ansible_distribution }} {{ v.ansible_distribution_version }}","{{ v.ansible_processor[2] | default('') }}","{{ v.video.stdout_lines | join(' + ') }}","{{ (v.ansible_memtotal_mb / 1024) | round | int }} GB ({{ v.pentes.stdout_lines | join(' + ') }})","{{ v.discos.stdout_lines | map('trim') | join(' + ') }}","{{ now(fmt='%d/%m/%Y') }}"
+{% endfor %}

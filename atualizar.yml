@@ -1,0 +1,38 @@
+# Atualiza todos os pacotes. Reinicia só a máquina que precisa e que não tem
+# ninguém usando; as outras ficam listadas no fim.
+#
+#   ansible-playbook atualizar.yml
+#   ansible-playbook atualizar.yml --limit pet-php
+- name: Atualizar as máquinas do PET
+  hosts: maquinas
+  tasks:
+    - name: Atualizar pacotes
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: full
+        autoremove: true
+
+    - name: Precisa reiniciar?
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reiniciar
+
+    - name: Tem alguém usando?
+      ansible.builtin.command: loginctl list-sessions --no-legend
+      register: sessoes
+      changed_when: false
+
+    - name: Quem está usando
+      ansible.builtin.set_fact:
+        # Colunas: sessão, uid, usuário, ... e, no systemd novo, a classe da
+        # sessão; a de classe "manager" é do próprio systemd, não de gente.
+        em_uso: "{{ sessoes.stdout_lines | map('split') | reject('contains', 'manager') | map(attribute=2) | reject('in', ['gdm', 'manutencao']) | unique | list }}"
+
+    - name: Reiniciar
+      ansible.builtin.reboot:
+      when: reiniciar.stat.exists and em_uso | length == 0
+
+    - name: Ficou para depois
+      ansible.builtin.debug:
+        msg: "Precisa reiniciar, mas {{ em_uso | join(', ') }} está usando."
+      when: reiniciar.stat.exists and em_uso | length > 0

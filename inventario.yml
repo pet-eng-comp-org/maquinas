@@ -1,0 +1,14 @@
+# Máquinas da sala do PET. O nome é o mesmo na rede Tailscale do PET.
+# Patrimônio e modelo batem com o catálogo de computadores do Drive.
+maquinas:
+  hosts:
+    pet-php:
+      patrimonio: "276406"
+    pet-javascript:
+      patrimonio: "276389"
+    pet-python:
+      patrimonio: "276397"
+    pet-rust:
+      patrimonio: "257356"
+    pet-kotlin:
+      patrimonio: "250836"

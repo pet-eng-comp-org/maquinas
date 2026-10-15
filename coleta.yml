@@ -1,0 +1,55 @@
+# Lê a configuração de cada máquina e grava em estado/<máquina>.yml e em
+# estado/catalogo.csv (mesmas colunas do catálogo de computadores do Drive).
+# Commitar o resultado deixa no histórico do git quando cada coisa mudou.
+#
+#   ansible-playbook coleta.yml
+- name: Coletar a configuração das máquinas
+  hosts: maquinas
+  tasks:
+    - name: Modelo da máquina
+      ansible.builtin.command: dmidecode -s system-product-name
+      register: modelo
+      changed_when: false
+
+    - name: Pentes de memória
+      ansible.builtin.shell: >-
+        dmidecode -t memory | awk -F': ' '
+        /^\tSize:/ && $2 !~ /No Module/ {tam=$2}
+        /^\tType:/ && tam {tipo=$2}
+        /^\tConfigured Memory Speed:|^\tSpeed:/ && tam && tipo {sub(/ MT\/s/,"",$2); print tam " " tipo "-" $2; tam=""; tipo=""}'
+      register: pentes
+      changed_when: false
+
+    - name: Placas de vídeo
+      ansible.builtin.shell: >-
+        lspci | grep -Ei 'vga|3d controller' | sed 's/^[^:]*:[^:]*: //'
+      register: video
+      changed_when: false
+
+    - name: Discos
+      ansible.builtin.shell: >-
+        lsblk -dbno SIZE,ROTA,TRAN,MODEL -I 8,259 | awk '{
+        gb = $1 / 1e9; tam = gb >= 1000 ? sprintf("%.0f TB", gb / 1000) : sprintf("%.0f GB", gb);
+        modelo = ""; for (i = 4; i <= NF; i++) modelo = modelo " " $i;
+        print tam " " ($2 ? "HDD" : "SSD") " " toupper($3) " (" substr(modelo, 2) ")"}'
+      register: discos
+      changed_when: false
+
+    - name: Gravar estado/{{ inventory_hostname }}.yml
+      ansible.builtin.template:
+        src: modelos/estado.yml.j2
+        dest: "estado/{{ inventory_hostname }}.yml"
+        mode: "0644"
+      delegate_to: localhost
+      become: false
+
+- name: Montar o catálogo
+  hosts: localhost
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Gravar estado/catalogo.csv
+      ansible.builtin.template:
+        src: modelos/catalogo.csv.j2
+        dest: estado/catalogo.csv
+        mode: "0644"
