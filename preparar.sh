@@ -14,9 +14,8 @@ chave_tailscale=${2:?uso: preparar.sh <nome> <chave-do-tailscale>}
 
 [[ $EUID -eq 0 ]] || { echo "rode com sudo" >&2; exit 1; }
 
-chaves_ssh=(
-	"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDkISheuM0ZE0YFCoEticLi3BPbd4O58jy34iBIotvyx manutencao@server"
-)
+# Só a chave do server, para o Ansible entrar; o base.yml põe as outras de chaves/.
+chave_server=https://raw.githubusercontent.com/pet-eng-comp-org/maquinas/main/chaves/manutencao@server.pub
 
 echo "== nome: $nome"
 hostnamectl set-hostname "$nome"
@@ -32,7 +31,7 @@ echo "== conta manutencao"
 id manutencao &>/dev/null || useradd --create-home --shell /bin/bash --comment "Manutenção do PET" manutencao
 passwd --lock manutencao >/dev/null
 install -d -m 700 -o manutencao -g manutencao ~manutencao/.ssh
-printf '%s\n' "${chaves_ssh[@]}" > ~manutencao/.ssh/authorized_keys
+curl -fsSL "$chave_server" > ~manutencao/.ssh/authorized_keys
 chown manutencao:manutencao ~manutencao/.ssh/authorized_keys
 chmod 600 ~manutencao/.ssh/authorized_keys
 echo "manutencao ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/manutencao
