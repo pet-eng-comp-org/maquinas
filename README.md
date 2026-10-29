@@ -18,7 +18,7 @@ As máquinas ficam numa rede Tailscale do PET, ligada à organização `pet-eng-
 
 ## Máquina nova
 
-1. Gerar uma chave de autenticação no painel do Tailscale, em Settings > Keys, reutilizável, pré-aprovada e com a tag `tag:maquina`.
+1. Gerar uma chave de autenticação no painel do Tailscale, em Settings > Keys: de uso único, pré-aprovada e com a tag `tag:maquina`. De uso único porque ela fica no histórico do terminal da máquina, que outras pessoas usam.
 2. Na máquina, com uma conta que tenha sudo:
    ```sh
    curl -fsSL https://raw.githubusercontent.com/pet-eng-comp-org/maquinas/main/preparar.sh | sudo bash -s -- pet-<nome> <chave>
@@ -31,10 +31,11 @@ As máquinas ficam numa rede Tailscale do PET, ligada à organização `pet-eng-
 ```sh
 ansible-playbook coleta.yml                           # atualiza estado/ e estado/catalogo.csv
 ansible-playbook atualizar.yml                        # atualiza todas
-ansible maquinas -m apt -a "name=<pacote>"            # instala um pacote em todas
 ansible pet-php -a "df -h /"                          # roda um comando numa
 ssh pet-php                                           # entra numa
 ```
+
+Para instalar um pacote em todas, pôr o nome na lista `pacotes` do `base.yml` e rodar o `base.yml`. Instalado direto pelo `ansible`, ele não fica em lugar nenhum e some da máquina que for reinstalada.
 
 O `estado/catalogo.csv` tem as mesmas colunas do catálogo de computadores do Drive (Manutenção/Inventário).
 
